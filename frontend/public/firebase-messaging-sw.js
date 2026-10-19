@@ -1,22 +1,34 @@
-/* Replace values with your Firebase Web App config. Never place a service-account key here. */
+/* Firebase Web App config is public client configuration. Never put a service-account key here. */
 importScripts('https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging-compat.js');
-firebase.initializeApp({
-  apiKey: 'replace-with-web-api-key',
-  authDomain: 'your-project-id.firebaseapp.com',
-  projectId: 'your-project-id',
-  storageBucket: 'your-project-id.firebasestorage.app',
-  messagingSenderId: 'replace-with-sender-id',
-  appId: 'replace-with-web-app-id',
-});
-const messaging = firebase.messaging();
-messaging.onBackgroundMessage(payload => {
-  self.registration.showNotification(payload.notification?.title || 'NIRNAY update', {
-    body: payload.notification?.body || 'You have a new update.',
-    data: payload.data || {}, icon: '/favicon.svg',
+
+const params = new URL(self.location.href).searchParams;
+const config = {
+  apiKey: params.get('apiKey') || '',
+  authDomain: params.get('authDomain') || '',
+  projectId: params.get('projectId') || '',
+  storageBucket: params.get('storageBucket') || '',
+  messagingSenderId: params.get('messagingSenderId') || '',
+  appId: params.get('appId') || '',
+};
+
+if (!config.apiKey || !config.projectId || !config.messagingSenderId || !config.appId) {
+  console.error('NIRNAY Firebase Messaging service worker is missing Firebase Web App configuration.');
+} else {
+  firebase.initializeApp(config);
+  const messaging = firebase.messaging();
+
+  messaging.onBackgroundMessage(payload => {
+    self.registration.showNotification(payload.notification?.title || 'NIRNAY update', {
+      body: payload.notification?.body || 'You have a new update.',
+      data: payload.data || {},
+      icon: '/favicon.svg',
+    });
   });
-});
+}
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification?.data?.url || '/app'));
+  const target = event.notification?.data?.url || '/app';
+  event.waitUntil(clients.openWindow(target));
 });
