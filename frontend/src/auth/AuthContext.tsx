@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, updateProfile } from 'firebase/auth';
-import { AuthContext, type AuthContextValue } from './authContext';
+import { AuthContext, type AuthContextValue } from './auth-context';
 import { auth } from '../lib/firebase';
 
 function requireAuth() {
