@@ -1,0 +1,7 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Browser access is disabled. FastAPI verifies identity and enforces UID ownership.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
