@@ -1,20 +1,28 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { firebaseConfigured } from '../lib/firebase';
+
 export default function LoginPage() {
-  const { user, signIn } = useAuth(); const location = useLocation();
+  const { user, signIn } = useAuth();
+  const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from || '/app';
-  const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
-  const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   if (user) return <Navigate to={from} replace />;
+
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError('');
-    try { await signIn(email, password); } catch (err) { setError(err instanceof Error ? err.message : 'Could not sign in.'); }
+    try { await signIn(email, password); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not sign in.'); }
     finally { setBusy(false); }
   }
+
   return <main className="auth-layout"><section className="auth-card">
-    <p className="eyebrow">NIRNAY · SECURE WORKSPACE</p><h1>Welcome back</h1>
+    <p className="eyebrow">NIRNAY · SECURE WORKSPACE</p>
+    <h1>Welcome back</h1>
     <p className="muted">Sign in to access your saved records and tender documents.</p>
     {!firebaseConfigured && <div className="notice">Configure Firebase Web App values in frontend/.env.local, then restart Vite.</div>}
     {error && <div className="error-box" role="alert">{error}</div>}
