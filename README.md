@@ -1,152 +1,108 @@
 # NIRNAY — local development and Firebase setup
 
-NIRNAY has a React + TypeScript + Vite frontend in `frontend/` and a FastAPI backend in `backend/`. Firebase Authentication handles browser sign-in; the backend verifies Firebase ID tokens with Firebase Admin. Firestore stores per-user records and metadata, Firebase Storage stores private document objects, and Firebase Cloud Messaging provides browser notifications.
+NIRNAY has a React + TypeScript + Vite frontend in frontend/ and a FastAPI backend in backend/. Firebase Authentication handles browser sign-in; the backend verifies Firebase ID tokens. Firestore stores user profiles, records, and document metadata. Firebase Storage stores uploaded file bytes only when Storage is enabled and the project plan supports it. Firebase Cloud Messaging provides optional browser notifications.
 
-## Requirements
+The backend in this branch uses Firestore, not PostgreSQL. Existing PostgreSQL data is not migrated automatically.
 
-- Git
-- Node.js LTS with npm
-- Python 3.11 or newer (use the version supported by your local deployment)
-- A Firebase project with billing enabled where required by the Firebase products you use
+## 1. Firebase Console setup
 
-## 1. Clone and install
+1. Select your Firebase project.
+2. In Authentication → Sign-in method, enable Email/Password.
+3. Create a Cloud Firestore database using Standard edition and Production mode.
+4. Keep the repository's Firestore rules deployed. They deny direct browser reads and writes; the backend uses the Admin SDK after validating the Firebase ID token and checking the user UID.
+5. Storage is optional for Firestore testing. As of 2026, Firebase Storage setup for new projects may require the Blaze pay-as-you-go plan. If you stay on Spark/free, the document upload/download endpoints will not work until you configure another storage provider.
 
-From PowerShell:
+## 2. Configure the frontend
 
-```powershell
-git clone https://github.com/ayushgupta09094-bugslayer/NIRNAY.git
-cd NIRNAY
+From PowerShell at the repository root:
 
-cd frontend
-npm install
-cd ..
-```
+    Copy-Item frontend/.env.example frontend/.env.local
+    notepad frontend/.env.local
 
-## 2. Configure Firebase Web App
+Fill in the values from Firebase Console → Project settings → General → Your apps:
 
-1. Open the Firebase Console and create/select your project.
-2. In Project settings → General → Your apps, add a Web app and copy its Firebase config.
-3. In Authentication → Sign-in method, enable **Email/Password**.
-4. In Authentication → Settings → Authorized domains, make sure `localhost` is allowed for local development.
-5. Copy the frontend environment template:
+    VITE_FIREBASE_API_KEY=your-web-api-key
+    VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=your-project-id
+    VITE_FIREBASE_STORAGE_BUCKET=your-actual-storage-bucket
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+    VITE_FIREBASE_APP_ID=your-web-app-id
+    VITE_FIREBASE_VAPID_KEY=your-web-push-public-vapid-key
+    VITE_API_BASE_URL=
 
-   ```powershell
-   Copy-Item frontend/.env.example frontend/.env.local
-   ```
+The VAPID key is only needed for push notifications. Never put a service-account private key in a VITE variable.
 
-6. Open `frontend/.env.local` and replace the placeholder values with the Web App values:
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_AUTH_DOMAIN`
-   - `VITE_FIREBASE_PROJECT_ID`
-   - `VITE_FIREBASE_STORAGE_BUCKET`
-   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
-   - `VITE_FIREBASE_APP_ID`
+## 3. Configure the backend
 
-For notifications, open Firebase Console → Cloud Messaging → Web configuration / Web Push certificates. Generate or copy the **Web Push public VAPID key** and set `VITE_FIREBASE_VAPID_KEY` to that value.
+In Firebase Console → Project settings → Service accounts, generate a private key for local development. Save the downloaded JSON file as backend/service-account.json. Never commit or share it.
 
-Firebase Web App configuration and the VAPID public key are client-side values, not service-account secrets. Never put a service-account JSON key or private key in a `VITE_*` variable or commit it.
+From the repository root, create the backend environment file:
 
-## 3. Enable Firestore and Storage
+    Copy-Item backend/.env.example backend/.env
+    notepad backend/.env
 
-1. Firebase Console → Firestore Database → Create database.
-2. Firebase Console → Storage → Get started.
-3. Keep the repository's Firestore and Storage rules deployed. They deny direct browser access; the FastAPI backend accesses data after verifying the signed-in user's Firebase ID token and scopes records to that UID.
+Set these values:
 
-## 4. Configure Firebase Admin for the backend
+    FIREBASE_PROJECT_ID=your-project-id
+    FIREBASE_STORAGE_BUCKET=your-actual-storage-bucket
+    GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+    FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+    ENABLE_TEST_NOTIFICATIONS=false
 
-Create a service account in Firebase Console → Project settings → Service accounts → Generate new private key. Store the downloaded JSON locally at `backend/service-account.json`; never commit it.
+Use the exact project ID and bucket name from Firebase Console. Storage bucket configuration is only required for uploads/downloads. Start Uvicorn from backend/ so the relative service-account path resolves.
 
-Create the backend environment:
+Admin SDK requests bypass Firestore Security Rules. The API must therefore verify ID tokens and scope each user-owned operation to the verified UID. Do not remove these checks or deploy permissive rules.
 
-```powershell
-Copy-Item backend/.env.example backend/.env
-```
+## 4. Firestore data layout
 
-Edit `backend/.env` and set the same project ID and storage bucket:
+The backend creates documents automatically; you do not need to create collections manually.
 
-```dotenv
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
-GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-ENABLE_TEST_NOTIFICATIONS=false
-```
+- users/{firebase_uid}: user profile.
+- users/{firebase_uid}/records/{record_id}: user records.
+- users/{firebase_uid}/documents/{document_id}: file metadata.
+- users/{firebase_uid}/fcmInstallations/{installation_id}: notification installation metadata.
 
-Use the actual bucket name displayed in Firebase Console → Storage. Some older projects use a `.appspot.com` bucket. Because the credential path above is relative to the backend working directory, launch Uvicorn from `backend/`.
+Existing PostgreSQL data is not automatically copied to Firestore.
 
-Install and start the backend (PowerShell):
+## 5. Run the backend
 
-```powershell
-cd backend
-py -m venv venv
-.\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-Copy-Item .env.example .env -ErrorAction SilentlyContinue
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
+Open PowerShell at the repository root:
 
-If PowerShell prevents venv activation, use this for the current terminal only, then activate again:
+    cd backend
+    py -m venv venv
+    .\venv\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\venv\Scripts\Activate.ps1
-```
+If PowerShell blocks activation, run this in that terminal and activate again:
 
-Open a second terminal to continue with the frontend.
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+    .\venv\Scripts\Activate.ps1
 
-## 5. Start the frontend
+If you already have a virtual environment, activate it instead of creating another one.
 
-In a new PowerShell terminal, from the repository root:
+## 6. Run the frontend
 
-```powershell
-cd frontend
-npm install
-npm run lint
-npm run build
-npm run dev
-```
+Open a second PowerShell terminal at the repository root:
 
-Vite usually serves the frontend at http://localhost:5173. The development proxy forwards `/api` to `http://127.0.0.1:8000`. To use another backend URL, set `VITE_DEV_API_TARGET` before starting Vite.
+    cd frontend
+    npm install
+    npm run lint
+    npm run build
+    npm run dev
 
-Check backend health at http://127.0.0.1:8000/healthz and API documentation at http://127.0.0.1:8000/docs.
+Open http://localhost:5173. Backend health is available at http://127.0.0.1:8000/healthz and API docs at http://127.0.0.1:8000/docs.
 
-## 6. Test the complete local flow
+## 7. Test the integration
 
-1. Open http://localhost:5173/register and create a test account.
-2. Sign in, then confirm the dashboard loads.
-3. Save a test record. Check Firestore under `users/{firebase-uid}/records` (or the collection path used by the records API).
-4. Upload a small PDF/TXT test file. Verify its metadata in Firestore and its object in Storage.
-5. Download and delete the test file; verify each action succeeds.
-6. Run `npm run lint` and `npm run build` from `frontend/` after code changes.
+1. Register and sign in at http://localhost:5173/register.
+2. Save a test record.
+3. Open Firebase Console → Firestore → Data and verify a profile under users and the record under users/{firebase_uid}/records.
+4. Test file uploads only if Firebase Storage is enabled and configured.
+5. Test with two accounts to confirm that one user cannot access another user's records.
+6. Run npm run lint and npm run build in frontend/ before deployment.
 
-If the browser gets a 401, sign out and back in; confirm the backend is using the correct Firebase project/service account. If the backend returns 503, inspect its terminal for Admin SDK credential, project ID, Firestore, or bucket configuration errors.
+## 8. Optional push notifications
 
-## 7. Enable push notifications (optional)
-
-1. Use `http://localhost:5173` or HTTPS; browser push generally will not work on arbitrary insecure origins.
-2. In Firebase Console → Cloud Messaging, ensure Cloud Messaging is available and configure the Web Push VAPID public key.
-3. Set `VITE_FIREBASE_VAPID_KEY` in `frontend/.env.local`, then restart Vite.
-4. Sign in and click **Enable notifications** on the dashboard; grant the browser permission.
-5. If testing backend-generated notifications, set `ENABLE_TEST_NOTIFICATIONS=true` in `backend/.env` temporarily, restart the backend, and call the authenticated `POST /api/v1/notifications/test` endpoint (for example using the browser's signed-in session or an API tool with a Firebase ID token). Turn the flag off afterward.
-
-The service worker receives the Web App's public config via its registration URL. Do not expose the Firebase Admin service-account key to the browser. Clear or unregister an old service worker in browser DevTools → Application → Service Workers if a stale worker continues using old settings.
-
-## 8. Common commands
-
-From repository root:
-
-```powershell
-# Update the checkout safely
-git switch main
-git pull --ff-only origin main
-
-# Frontend checks
-cd frontend
-npm install
-npm run lint
-npm run build
-npm run dev
-```
-
-Run the backend in a separate terminal as shown above. Do not use `git reset --hard` to fix a pull conflict if you have uncommitted changes; stash or commit your work first.
+Configure Cloud Messaging and the public Web Push VAPID key, then set VITE_FIREBASE_VAPID_KEY in frontend/.env.local. Restart Vite after changing environment variables. Push notifications are optional for testing Authentication and Firestore records.
