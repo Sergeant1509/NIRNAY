@@ -9,7 +9,7 @@ def send_user_notification(
     body: str,
     data: dict[str, str] | None = None,
 ) -> int:
-    """Send a notification to the FCM tokens registered for a user."""
+    """Send an FCM notification to the registration tokens stored for a user."""
     registrations = (
         get_firestore_client()
         .collection("users")
@@ -19,7 +19,7 @@ def send_user_notification(
     )
     sent = 0
     for registration in registrations:
-        token = (registration.to_dict() or {}).get("fid")
+        token = (registration.to_dict() or {}).get("token")
         if not token:
             continue
         try:
