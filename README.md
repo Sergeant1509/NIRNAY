@@ -72,7 +72,7 @@ You do not need to create the app collections manually. The backend writes recor
 - `users/{firebase_uid}` — user profile.
 - `users/{firebase_uid}/records/{record_id}` — saved records.
 - `users/{firebase_uid}/documents/{document_id}` — document metadata (requires Storage for actual file bytes).
-- `users/{firebase_uid}/fcmInstallations/{installation_id}` — notification registration metadata.
+- `users/{firebase_uid}/fcmInstallations/{installation_id}` — notification registration tokens.
 
 The Firebase Admin SDK bypasses Firestore Security Rules, so the backend must continue verifying ID tokens and scoping operations to the verified UID. Do not replace the rules with public read/write access.
 
