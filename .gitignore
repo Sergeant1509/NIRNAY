@@ -9,3 +9,5 @@ backend/.venv/
 backend/venv/
 __pycache__/
 *.py[cod]
+# Firebase local deployment cache
+.firebase/

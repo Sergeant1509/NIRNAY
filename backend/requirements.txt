@@ -15,3 +15,4 @@ typing-inspection==0.4.4
 typing_extensions==4.16.0
 uvicorn==0.54.0
 firebase-admin>=7.5.0,<8.0.0
+cloudinary>=1.30.0,<2.0.0
