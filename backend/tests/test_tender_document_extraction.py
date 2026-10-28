@@ -2,7 +2,7 @@ from app.api.tender_document_extraction import _clean, _extract_fields
 
 
 def test_clean_collapses_horizontal_whitespace():
-    assert _clean("  Tender   title:  Example Project  ") == "Tender title:  Example Project"
+    assert _clean("  Tender   title:  Example Project  ") == "Tender title: Example Project"
 
 
 def test_extracts_common_tender_fields_and_key_value_pairs():
