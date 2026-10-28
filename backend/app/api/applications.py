@@ -11,7 +11,7 @@ from app.core.security import require_user
 from app.services.document_extraction import extract_document_text
 
 router = APIRouter(prefix="/api/v1/applications", tags=["Applications"])
-ApplicationStatus = Literal["draft", "submitted", "under_review"]
+ApplicationStatus = Literal["draft", "submitted"]
 
 
 class ApplicationCreate(BaseModel):
@@ -165,7 +165,7 @@ def evaluate_application(application_id: str, user: dict[str, Any] = Depends(req
         "method": "document_content_phrase_screening_v1",
         "documents_read": len(extracted),
         "documents_unreadable": len(extraction_errors),
-        "disclaimer": "This preliminary screen uses filenames only. It does not read document contents, verify signatures, or establish legal compliance. Human review is required.",
+        "disclaimer": "This preliminary screen searches extracted document text and filenames for expected evidence phrases. It does not verify numeric thresholds, dates, certificate validity, signatures, authenticity, or legal compliance. Human review is required.",
         "createdBy": user["uid"],
         "createdAt": datetime.now(timezone.utc),
     }
