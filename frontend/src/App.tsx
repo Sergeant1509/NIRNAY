@@ -3,6 +3,7 @@ import { AuthProvider } from './auth/AuthContext';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardPage from './pages/DashboardPage';
+import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import './App.css';
@@ -18,7 +19,7 @@ export default function App() {
     <Route path="/" element={<HomeRedirect />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
-    <Route element={<ProtectedRoute />}><Route path="/app" element={<DashboardPage />} /></Route>
+    <Route element={<ProtectedRoute />}><Route path="/app" element={<DashboardPage />} /><Route path="/admin" element={<AdminPage />} /></Route>
     <Route path="*" element={<HomeRedirect />} />
   </Routes></AuthProvider></BrowserRouter>;
 }
