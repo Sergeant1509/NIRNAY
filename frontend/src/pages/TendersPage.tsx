@@ -24,7 +24,7 @@ export default function TendersPage() {
   const [deadline, setDeadline] = useState('');
   const [emdAmount, setEmdAmount] = useState('');
   const [tenderFee, setTenderFee] = useState('');
-  const [requirementsText, setRequirementsText] = useState('GST registration | Provide GST certificate | LEGAL | GST certificate, GSTIN');
+  const [requirementsText, setRequirementsText] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
