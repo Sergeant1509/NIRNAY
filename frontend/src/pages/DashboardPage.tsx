@@ -66,7 +66,7 @@ export default function DashboardPage() {
       setFile(null);
       const input = window.document.getElementById('document-file') as HTMLInputElement | null;
       if (input) input.value = '';
-      await loadData(); setMessage('Document uploaded to private Firebase Storage.');
+      await loadData(); setMessage('Document uploaded to private Cloudinary storage.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not upload document.'); }
     finally { setBusy(false); }
   }
@@ -110,11 +110,11 @@ export default function DashboardPage() {
         <form onSubmit={createRecord} className="form-stack"><label>Record title<input required maxLength={160} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Review GST certificate" /></label><label>Note<textarea rows={4} value={note} onChange={e => setNote(e.target.value)} placeholder="Add a short note or reminder" /></label><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save record'}</button></form>
       </article>
       <article className="panel"><p className="eyebrow">YOUR RECORDS</p><h2>Recent records</h2>{records.length === 0 ? <p className="muted">No saved records yet.</p> : <ul className="record-list">{records.map(r => <li key={r.id}><div><strong>{r.title}</strong><p className="muted">{r.kind.replace('_', ' ')} · {r.created_at ? new Date(r.created_at).toLocaleString() : 'just now'}</p>{typeof r.data.note === 'string' && <p>{r.data.note}</p>}</div><button className="button-danger" onClick={() => void deleteRecord(r.id)}>Delete</button></li>)}</ul>}</article>
-      <article className="panel"><p className="eyebrow">FIREBASE STORAGE</p><h2>Private tender documents</h2><p className="muted">PDF, PNG/JPG, DOCX, XLSX, or TXT; maximum 15 MiB per upload.</p>
+      <article className="panel"><p className="eyebrow">PRIVATE DOCUMENT STORAGE</p><h2>Private tender documents</h2><p className="muted">PDF, PNG/JPG, DOCX, XLSX, or TXT; maximum 15 MiB per upload.</p>
         <form onSubmit={uploadDocument} className="form-stack"><label>Choose a document<input id="document-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.txt" required onChange={e => setFile(e.target.files?.[0] || null)} /></label><button type="submit" disabled={busy || !file}>{busy ? 'Uploading…' : 'Upload document'}</button></form>
         {documents.length === 0 ? <p className="muted">No uploaded documents yet.</p> : <ul className="record-list">{documents.map(d => <li key={d.id}><div><strong>{d.filename}</strong><p className="muted">{(d.size_bytes / 1024).toFixed(1)} KB · {d.created_at ? new Date(d.created_at).toLocaleString() : 'just now'}</p><button className="button-secondary" onClick={() => void downloadDocument(d)}>Download</button></div><button className="button-danger" onClick={() => void deleteDocument(d)}>Delete</button></li>)}</ul>}
       </article>
     </section>
-    <footer className="page-footer">Firebase Authentication verifies identity · FastAPI authorizes access · Firestore stores records · Storage stores private files.</footer>
+    <footer className="page-footer">Firebase Authentication verifies identity · FastAPI authorizes access · Firestore stores records · Cloudinary stores private files.</footer>
   </main>;
 }
