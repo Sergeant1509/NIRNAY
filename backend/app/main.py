@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.tenders import router as tender_router
+from app.api.tender_document_extraction import router as tender_document_extraction_router
 from app.api.applications import router as applications_router
 from app.api.auth import router as auth_router
 from app.api.admin import router as admin_router
@@ -37,6 +38,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(tender_router)
+app.include_router(tender_document_extraction_router)
 app.include_router(applications_router)
 app.include_router(auth_router)
 app.include_router(admin_router)
