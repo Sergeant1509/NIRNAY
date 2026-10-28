@@ -1,3 +1,4 @@
+
 {
   "hosting": {
     "public": "frontend/dist",
@@ -7,6 +8,13 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "YOUR_CLOUD_RUN_SERVICE_NAME",
+          "region": "YOUR_CLOUD_RUN_REGION"
+        }
+      },
       {
         "source": "**",
         "destination": "/index.html"
