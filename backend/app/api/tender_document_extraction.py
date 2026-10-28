@@ -83,7 +83,7 @@ def _extract_fields(text: str) -> dict:
     title = _field(text, r"(?:name|title)\s+of\s+(?:the\s+)?(?:work|tender|project)|tender\s+title|subject")
     number = _field(text, r"(?:tender|bid|nit|rfp|e-?procurement)\s*(?:no\.?|number|id|reference)")
     organization = _field(text, r"(?:name\s+of\s+)?(?:procuring|tendering|issuing)\s+(?:entity|authority|organization|organisation|department)|department\s+name|organization")
-    deadline = _field(text, r"(?:bid|tender)\s+(?:submission\s+)?(?:end\s+date|closing\s+date|deadline)|last\s+date\s+for\s+(?:submission|bid)")
+    deadline = _field(text, r"(?:bid|tender)\s+(?:submission\s+)?(?:end\s+date|closing\s+date|deadline)|submission\s+deadline|deadline|due\s+date|last\s+date\s+for\s+(?:submission|bid)")
     emd = _field(text, r"(?:earnest\s+money\s+deposit|emd\s+amount|bid\s+security)")
     fee = _field(text, r"(?:tender\s+fee|document\s+fee|cost\s+of\s+tender)")
     # Keep extracted requirements as review prompts, not legal conclusions.
