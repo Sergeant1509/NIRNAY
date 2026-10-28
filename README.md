@@ -129,3 +129,11 @@ Open `http://localhost:5173`. Backend health: `http://127.0.0.1:8000/healthz`. A
 4. Leave `ENABLE_TEST_NOTIFICATIONS=false` except for a brief, deliberate test. Turn it off again afterward.
 
 Auth and Firestore record testing do not require push notifications or Firebase Storage.
+
+## 9. Tender document OCR intake
+
+The Tenders page includes an **Auto-fill from tender document** uploader. It accepts PDF, PNG, and JPG files up to 15 MiB. The backend first extracts embedded PDF text; if a PDF has little or no embedded text, or an image is uploaded, it uses Tesseract OCR. It then suggests tender number, title, issuing organization, submission deadline, EMD, tender fee, and likely requirement clauses where recognizable. Extracted fields are suggestions, not verified facts; reviewers must compare them with the original tender before publishing.
+
+The Python packages for PDF reading/rendering and OCR are listed in `backend/requirements.txt`. **Scanned PDFs and images require the Tesseract OCR engine installed on the backend host** in addition to those Python packages. For Windows local development, install Tesseract OCR and ensure `tesseract.exe` is available on `PATH`; restart the terminal/backend afterward. Text-based PDFs do not need Tesseract unless OCR fallback is required. On Linux deployment, install the host's `tesseract-ocr` package. The OCR endpoint is authenticated and processes the upload in memory; it does not save the tender file to Cloudinary or Firestore.
+
+The current extractor is rule-based and may miss fields or misread complex tables, Hindi text, multi-column layouts, or low-quality scans. It is a first-stage intake feature, not a substitute for human review or a legal compliance determination.
