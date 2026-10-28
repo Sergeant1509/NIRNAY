@@ -17,7 +17,11 @@ export default function RecordsPage() {
     catch (e) { setError(e instanceof Error ? e.message : 'Could not load records.'); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    // Initial data loading is an external synchronization; state updates occur after the request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
 
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError(''); setMessage('');
