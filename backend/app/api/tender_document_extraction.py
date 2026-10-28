@@ -2,7 +2,6 @@
 import io
 import re
 import shutil
-import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -16,10 +15,8 @@ from app.core.security import require_user
 router = APIRouter(prefix="/api/v1/tender-documents", tags=["Tender document extraction"])
 MAX_BYTES = 15 * 1024 * 1024
 MAX_PAGES = 30
-MAX_AUDIO_SECONDS = 30 * 60
-ALLOWED = {".pdf", ".png", ".jpg", ".jpeg", ".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm"}
+ALLOWED = {".pdf", ".png", ".jpg", ".jpeg"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
-AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm"}
 
 
 def _clean(value: str) -> str:
@@ -34,32 +31,7 @@ def _field(text: str, labels: str) -> str:
     return _clean(match.group(1))[:500] if match else ""
 
 
-def _extract_audio(content: bytes, extension: str) -> tuple[str, str]:
-    try:
-        from faster_whisper import WhisperModel
-    except ImportError as exc:
-        raise HTTPException(status_code=503, detail="Audio transcription is not configured. Install faster-whisper and FFmpeg on the backend host.") from exc
-    try:
-        with tempfile.NamedTemporaryFile(suffix=extension) as source:
-            source.write(content)
-            source.flush()
-            model = WhisperModel("base", device="cpu", compute_type="int8")
-            segments, info = model.transcribe(source.name, vad_filter=True, beam_size=3)
-            if info.duration and info.duration > MAX_AUDIO_SECONDS:
-                raise HTTPException(status_code=413, detail="Audio exceeds the 30-minute transcription limit.")
-            text = "\n".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail="Audio transcription failed. Check the audio format and ensure FFmpeg is installed.") from exc
-    if not text:
-        raise HTTPException(status_code=422, detail="No speech could be recognized in this audio.")
-    return text[:250_000], "audio_transcription"
-
-
 def _extract_text(content: bytes, extension: str) -> tuple[str, str]:
-    if extension in AUDIO_EXTENSIONS:
-        return _extract_audio(content, extension)
     text = ""
     if extension == ".pdf":
         try:
@@ -163,7 +135,7 @@ async def extract_tender_document(
     filename = Path(file.filename or "tender").name
     extension = Path(filename).suffix.lower()
     if extension not in ALLOWED:
-        raise HTTPException(status_code=415, detail="Supported formats: PDF, PNG/JPG screenshots or images, WAV, MP3, M4A, FLAC, OGG, and WEBM audio.")
+        raise HTTPException(status_code=415, detail="Upload a PDF, PNG, or JPG tender document.")
     content = await file.read(MAX_BYTES + 1)
     await file.close()
     if not content:
@@ -179,7 +151,7 @@ async def extract_tender_document(
         "text_preview": text[:4000],
         "normalized_data": {
             "source_filename": filename,
-            "source_type": "audio" if extension in AUDIO_EXTENSIONS else ("image" if extension in IMAGE_EXTENSIONS else "document"),
+            "source_type": "image" if extension in IMAGE_EXTENSIONS else "document",
             "key_value_pairs": _extract_fields(text)["key_value_pairs"],
             "lines": [_clean(line) for line in text.splitlines() if _clean(line)][:200],
         },
