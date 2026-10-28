@@ -2,7 +2,7 @@
 import io
 import re
 import shutil
-from datetime import datetime
+import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -16,7 +16,10 @@ from app.core.security import require_user
 router = APIRouter(prefix="/api/v1/tender-documents", tags=["Tender document extraction"])
 MAX_BYTES = 15 * 1024 * 1024
 MAX_PAGES = 30
-ALLOWED = {".pdf", ".png", ".jpg", ".jpeg"}
+MAX_AUDIO_SECONDS = 30 * 60
+ALLOWED = {".pdf", ".png", ".jpg", ".jpeg", ".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm"}
 
 
 def _clean(value: str) -> str:
@@ -31,7 +34,32 @@ def _field(text: str, labels: str) -> str:
     return _clean(match.group(1))[:500] if match else ""
 
 
+def _extract_audio(content: bytes, extension: str) -> tuple[str, str]:
+    try:
+        from faster_whisper import WhisperModel
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="Audio transcription is not configured. Install faster-whisper and FFmpeg on the backend host.") from exc
+    try:
+        with tempfile.NamedTemporaryFile(suffix=extension) as source:
+            source.write(content)
+            source.flush()
+            model = WhisperModel("base", device="cpu", compute_type="int8")
+            segments, info = model.transcribe(source.name, vad_filter=True, beam_size=3)
+            if info.duration and info.duration > MAX_AUDIO_SECONDS:
+                raise HTTPException(status_code=413, detail="Audio exceeds the 30-minute transcription limit.")
+            text = "\n".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="Audio transcription failed. Check the audio format and ensure FFmpeg is installed.") from exc
+    if not text:
+        raise HTTPException(status_code=422, detail="No speech could be recognized in this audio.")
+    return text[:250_000], "audio_transcription"
+
+
 def _extract_text(content: bytes, extension: str) -> tuple[str, str]:
+    if extension in AUDIO_EXTENSIONS:
+        return _extract_audio(content, extension)
     text = ""
     if extension == ".pdf":
         try:
@@ -62,7 +90,7 @@ def _extract_text(content: bytes, extension: str) -> tuple[str, str]:
                     image = ImageOps.grayscale(image)
                     pages.append(pytesseract.image_to_string(image, config="--psm 3"))
                 text = "\n".join(pages).strip()
-            else:
+            elif extension in IMAGE_EXTENSIONS:
                 image = Image.open(io.BytesIO(content))
                 image = ImageOps.grayscale(image)
                 text = pytesseract.image_to_string(image, config="--psm 3").strip()
@@ -107,6 +135,14 @@ def _extract_fields(text: str) -> dict:
             })
             if len(requirements) >= 30:
                 break
+    key_value_pairs = []
+    for line in text.splitlines():
+        line = _clean(line)
+        match = re.match(r"^([^:：]{2,80})\\s*[:：]\\s*(.{1,500})$", line)
+        if match:
+            key_value_pairs.append({"key": _clean(match.group(1)), "value": _clean(match.group(2))})
+            if len(key_value_pairs) >= 100:
+                break
     return {
         "tender_number": number,
         "title": title,
@@ -115,6 +151,7 @@ def _extract_fields(text: str) -> dict:
         "emd": emd,
         "tender_fee": fee,
         "requirements": requirements,
+        "key_value_pairs": key_value_pairs,
     }
 
 
@@ -126,7 +163,7 @@ async def extract_tender_document(
     filename = Path(file.filename or "tender").name
     extension = Path(filename).suffix.lower()
     if extension not in ALLOWED:
-        raise HTTPException(status_code=415, detail="Upload a PDF, PNG, or JPG tender document.")
+        raise HTTPException(status_code=415, detail="Supported formats: PDF, PNG/JPG screenshots or images, WAV, MP3, M4A, FLAC, OGG, and WEBM audio.")
     content = await file.read(MAX_BYTES + 1)
     await file.close()
     if not content:
@@ -140,6 +177,12 @@ async def extract_tender_document(
         "text_characters": len(text),
         "fields": _extract_fields(text),
         "text_preview": text[:4000],
+        "normalized_data": {
+            "source_filename": filename,
+            "source_type": "audio" if extension in AUDIO_EXTENSIONS else ("image" if extension in IMAGE_EXTENSIONS else "document"),
+            "key_value_pairs": _extract_fields(text)["key_value_pairs"],
+            "lines": [_clean(line) for line in text.splitlines() if _clean(line)][:200],
+        },
         "review_required": True,
         "disclaimer": "Extraction is a draft. Verify every field and requirement against the original tender before publishing or making a bid decision.",
     }
