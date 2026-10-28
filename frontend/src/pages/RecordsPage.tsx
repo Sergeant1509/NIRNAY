@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { FilePlus2, Trash2, ClipboardList, RefreshCw } from 'lucide-react';
 import { apiRequest, type UserRecord } from '../lib/api';
 
@@ -11,13 +11,13 @@ export default function RecordsPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  async function load() {
+  const load = useCallback(async () => {
     setError('');
     try { setRecords(await apiRequest<UserRecord[]>('/api/v1/records')); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not load records.'); }
     finally { setLoading(false); }
-  }
-  useEffect(() => { void load(); }, []);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
 
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError(''); setMessage('');
