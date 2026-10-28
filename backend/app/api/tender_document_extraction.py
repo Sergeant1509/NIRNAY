@@ -110,7 +110,7 @@ def _extract_fields(text: str) -> dict:
     key_value_pairs = []
     for line in text.splitlines():
         line = _clean(line)
-        match = re.match(r"^([^:：]{2,80})\\s*[:：]\\s*(.{1,500})$", line)
+        match = re.match(r"^([^:：]{2,80})\s*[:：]\s*(.{1,500})$", line)
         if match:
             key_value_pairs.append({"key": _clean(match.group(1)), "value": _clean(match.group(2))})
             if len(key_value_pairs) >= 100:
