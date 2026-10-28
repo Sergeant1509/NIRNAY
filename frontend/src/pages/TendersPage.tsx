@@ -7,7 +7,8 @@ type Requirement = { id?: string; title: string; description: string; mandatory:
 type Tender = { id: string; tender_number: string; title: string; organization: string; description?: string; status: string; deadline?: string | null; requirements: Requirement[] };
 type Application = { id: string; tenderId: string; tenderTitle: string; organizationName: string; status: string; latestVerificationRunId?: string };
 type Finding = { requirement_title: string; outcome: string; reason: string; matched_filenames: string[] };
-type Evaluation = { status: string; findings: Finding[]; disclaimer: string };\ntype TenderExtraction = { fields: { tender_number: string; title: string; organization: string; deadline: string; emd: string; tender_fee: string; requirements: Requirement[] }; extraction_method: string; text_characters: number; text_preview: string; disclaimer: string };
+type Evaluation = { status: string; findings: Finding[]; disclaimer: string };
+type TenderExtraction = { fields: { tender_number: string; title: string; organization: string; deadline: string; emd: string; tender_fee: string; requirements: Requirement[] }; extraction_method: string; text_characters: number; text_preview: string; disclaimer: string };
 
 export default function TendersPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -23,7 +24,8 @@ export default function TendersPage() {
   const [requirementsText, setRequirementsText] = useState('GST registration | Provide GST certificate | LEGAL | GST certificate, GSTIN');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);\n  const [ocrBusy, setOcrBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
   const [evaluations, setEvaluations] = useState<Record<string, Evaluation>>({});
 
   const load = useCallback(async () => {
@@ -55,7 +57,7 @@ export default function TendersPage() {
       if (fields.tender_number) setTenderNumber(fields.tender_number);
       if (fields.title) setTitle(fields.title);
       if (fields.organization) setIssuer(fields.organization);
-      if (fields.deadline) setDescription(current => [current, 'Submission deadline (extracted; verify): ' + fields.deadline].filter(Boolean).join('\\n'));
+      if (fields.deadline) setDescription(current => [current, 'Submission deadline (extracted; verify): ' + fields.deadline].filter(Boolean).join('\n'));
       if (fields.emd || fields.tender_fee) setDescription(current => [current, fields.emd ? 'EMD (extracted; verify): ' + fields.emd : '', fields.tender_fee ? 'Tender fee (extracted; verify): ' + fields.tender_fee : ''].filter(Boolean).join('\\n'));
       if (fields.requirements.length) {
         setRequirementsText(fields.requirements.map(item => [item.title, item.description, 'REVIEW', item.title].join(' | ')).join('\\n'));
@@ -109,7 +111,7 @@ export default function TendersPage() {
     {message && <div className="tender-alert tender-success" role="status">{message}</div>}
 
     {canManage && <section className="tender-panel"><h2>Publish a tender</h2><p className="muted">One requirement per line: Title | Description | CATEGORY | evidence phrase, evidence phrase.</p>
-      <div className="tender-ocr-box"><h3>Auto-fill from tender document</h3><p className="muted">Upload a PDF or scanned image to extract available tender fields and likely requirements. Extraction is a draft and must be verified.</p><label className="tender-upload"> <span>{ocrBusy ? 'Extracting document…' : 'Choose PDF, image, screenshot, or audio'}</span><input type="file" accept=".pdf,.png,.jpg,.jpeg,.wav,.mp3,.m4a,.flac,.ogg,.webm,application/pdf,image/png,image/jpeg,audio/*" disabled={ocrBusy || busy} onChange={e => { void extractTender(e.target.files?.[0]); e.currentTarget.value = ''; }} /></label></div>
+      <div className="tender-ocr-box"><h3>Auto-fill from tender document</h3><p className="muted">Upload a PDF or scanned image to extract available tender fields and likely requirements. Extraction is a draft and must be verified.</p><label className="tender-upload"> <span>{ocrBusy ? 'Extracting document…' : 'Choose tender PDF or image'}</span><input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" disabled={ocrBusy || busy} onChange={e => { void extractTender(e.target.files?.[0]); e.currentTarget.value = ''; }} /></label></div>
       <form className="tender-form" onSubmit={createTender}>
         <label>Tender number<input required minLength={2} value={tenderNumber} onChange={e => setTenderNumber(e.target.value)} /></label>
         <label>Tender title<input required minLength={3} value={title} onChange={e => setTitle(e.target.value)} /></label>
