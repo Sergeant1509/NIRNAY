@@ -85,6 +85,7 @@ export default function TendersPage() {
       });
       await apiRequest('/api/v1/tenders', { method: 'POST', body: JSON.stringify({ tender_number: tenderNumber, title, organization: issuer, description, deadline: deadline || null, emd_amount: emdAmount, tender_fee: tenderFee, status: 'open', requirements }) });
       setTenderNumber(''); setTitle(''); setIssuer(''); setDescription('');
+      setDeadline(''); setEmdAmount(''); setTenderFee('');
       await load(); setMessage('Tender published.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not create tender.'); }
     finally { setBusy(false); }
