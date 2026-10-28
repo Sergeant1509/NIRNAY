@@ -38,6 +38,8 @@ export default function TendersPage() {
 
   useEffect(() => {
     let alive = true;
+    // Initial data loading is an external synchronization; state updates occur after the request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load().catch(e => { if (alive) setError(e instanceof Error ? e.message : 'Could not load tender data.'); });
     return () => { alive = false; };
   }, [load]);
