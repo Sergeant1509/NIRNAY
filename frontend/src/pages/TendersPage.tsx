@@ -83,7 +83,7 @@ export default function TendersPage() {
         if (!reqTitle || !reqDescription || !category || !evidence) throw new Error('Each requirement line must be: Title | Description | CATEGORY | evidence phrase, evidence phrase');
         return { id: 'req-' + (index + 1), title: reqTitle, description: reqDescription, category, mandatory: true, expected_evidence: evidence.split(',').map(part => part.trim()).filter(Boolean) };
       });
-      await apiRequest('/api/v1/tenders', { method: 'POST', body: JSON.stringify({ tender_number: tenderNumber, title, organization: issuer, description, status: 'open', requirements }) });
+      await apiRequest('/api/v1/tenders', { method: 'POST', body: JSON.stringify({ tender_number: tenderNumber, title, organization: issuer, description, deadline: deadline || null, emd_amount: emdAmount, tender_fee: tenderFee, status: 'open', requirements }) });
       setTenderNumber(''); setTitle(''); setIssuer(''); setDescription('');
       await load(); setMessage('Tender published.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not create tender.'); }
