@@ -20,7 +20,11 @@ export default function DocumentsPage() {
     catch (e) { setError(e instanceof Error ? e.message : 'Could not load documents.'); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    // Initial data loading is an external synchronization; state updates occur after the request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
 
   async function upload(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
