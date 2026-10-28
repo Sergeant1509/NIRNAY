@@ -28,6 +28,8 @@ class TenderCreate(BaseModel):
     organization: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=5000)
     deadline: datetime | None = None
+    emd_amount: str = Field(default="", max_length=200)
+    tender_fee: str = Field(default="", max_length=200)
     status: Literal["draft", "open"] = "draft"
     requirements: list[RequirementInput] = Field(default_factory=list, max_length=100)
 
@@ -43,8 +45,6 @@ def _role(user: dict[str, Any]) -> str:
 def _can_manage(user: dict[str, Any]) -> None:
     if _role(user) not in {"admin", "reviewer"}:
         raise HTTPException(status_code=403, detail="Tender management requires reviewer or administrator access.")
-
-
 
 
 def _audit(user: dict[str, Any], action: str, target_id: str, details: dict[str, Any]) -> None:
@@ -77,6 +77,8 @@ def get_demo_tender() -> dict[str, Any]:
         "organization": "NIRNAY Demonstration Authority",
         "description": "Sample tender for demonstrating the intake workflow.",
         "status": "open",
+        "emd_amount": "Rs. 25,000",
+        "tender_fee": "Rs. 1,000",
         "requirements": [
             {"id": "REQ-GST", "title": "GST registration", "description": "Provide GST registration evidence.", "mandatory": True, "category": "LEGAL", "expected_evidence": ["GST certificate", "GSTIN"]},
             {"id": "REQ-TURNOVER", "title": "Annual turnover", "description": "Provide audited financial evidence for the required turnover.", "mandatory": True, "category": "FINANCIAL", "expected_evidence": ["audited financial statement", "CA certificate"]},
@@ -115,7 +117,8 @@ def create_tender(body: TenderCreate, user: dict[str, Any] = Depends(require_use
     data = {
         "tender_number": body.tender_number.strip(), "title": body.title.strip(),
         "organization": body.organization.strip(), "description": body.description.strip(),
-        "deadline": body.deadline, "status": body.status, "requirements": requirements,
+        "deadline": body.deadline, "emd_amount": body.emd_amount.strip(), "tender_fee": body.tender_fee.strip(),
+        "status": body.status, "requirements": requirements,
         "createdBy": user["uid"], "createdAt": datetime.now(timezone.utc),
         "updatedAt": datetime.now(timezone.utc), "schemaVersion": 1,
     }
