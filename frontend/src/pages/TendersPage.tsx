@@ -4,7 +4,7 @@ import { apiRequest, type UserDocument, type UserProfile } from '../lib/api';
 import './TendersPage.css';
 
 type Requirement = { id?: string; title: string; description: string; mandatory: boolean; category: string; expected_evidence: string[] };
-type Tender = { id: string; tender_number: string; title: string; organization: string; description?: string; status: string; deadline?: string | null; requirements: Requirement[] };
+type Tender = { id: string; tender_number: string; title: string; organization: string; description?: string; status: string; deadline?: string | null; emd_amount?: string; tender_fee?: string; requirements: Requirement[] };
 type Application = { id: string; tenderId: string; tenderTitle: string; organizationName: string; status: string; latestVerificationRunId?: string };
 type Finding = { requirement_title: string; outcome: string; reason: string; matched_filenames: string[] };
 type Evaluation = { status: string; findings: Finding[]; disclaimer: string };
@@ -21,6 +21,9 @@ export default function TendersPage() {
   const [title, setTitle] = useState('');
   const [issuer, setIssuer] = useState('');
   const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [emdAmount, setEmdAmount] = useState('');
+  const [tenderFee, setTenderFee] = useState('');
   const [requirementsText, setRequirementsText] = useState('GST registration | Provide GST certificate | LEGAL | GST certificate, GSTIN');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
