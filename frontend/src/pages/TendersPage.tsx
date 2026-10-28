@@ -58,9 +58,9 @@ export default function TendersPage() {
       if (fields.title) setTitle(fields.title);
       if (fields.organization) setIssuer(fields.organization);
       if (fields.deadline) setDescription(current => [current, 'Submission deadline (extracted; verify): ' + fields.deadline].filter(Boolean).join('\n'));
-      if (fields.emd || fields.tender_fee) setDescription(current => [current, fields.emd ? 'EMD (extracted; verify): ' + fields.emd : '', fields.tender_fee ? 'Tender fee (extracted; verify): ' + fields.tender_fee : ''].filter(Boolean).join('\\n'));
+      if (fields.emd || fields.tender_fee) setDescription(current => [current, fields.emd ? 'EMD (extracted; verify): ' + fields.emd : '', fields.tender_fee ? 'Tender fee (extracted; verify): ' + fields.tender_fee : ''].filter(Boolean).join('\n'));
       if (fields.requirements.length) {
-        setRequirementsText(fields.requirements.map(item => [item.title, item.description, 'REVIEW', item.title].join(' | ')).join('\\n'));
+        setRequirementsText(fields.requirements.map(item => [item.title, item.description, 'REVIEW', item.title].join(' | ')).join('\n'));
       }
       setMessage('Extracted using ' + result.extraction_method + '. Review every populated field and clause before publishing. ' + result.text_characters + ' characters read.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not extract this tender document.'); }
