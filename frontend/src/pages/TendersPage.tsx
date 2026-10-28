@@ -60,8 +60,13 @@ export default function TendersPage() {
       if (fields.tender_number) setTenderNumber(fields.tender_number);
       if (fields.title) setTitle(fields.title);
       if (fields.organization) setIssuer(fields.organization);
-      if (fields.deadline) setDescription(current => [current, 'Submission deadline (extracted; verify): ' + fields.deadline].filter(Boolean).join('\n'));
-      if (fields.emd || fields.tender_fee) setDescription(current => [current, fields.emd ? 'EMD (extracted; verify): ' + fields.emd : '', fields.tender_fee ? 'Tender fee (extracted; verify): ' + fields.tender_fee : ''].filter(Boolean).join('\n'));
+      if (fields.deadline) {
+        const parsedDeadline = Date.parse(fields.deadline);
+        if (Number.isFinite(parsedDeadline)) setDeadline(new Date(parsedDeadline).toISOString().slice(0, 16));
+        else setDescription(current => [current, 'Submission deadline (extracted; verify): ' + fields.deadline].filter(Boolean).join('\n'));
+      }
+      if (fields.emd) setEmdAmount(fields.emd);
+      if (fields.tender_fee) setTenderFee(fields.tender_fee);
       if (fields.requirements.length) {
         setRequirementsText(fields.requirements.map(item => [item.title, item.description, 'REVIEW', item.title].join(' | ')).join('\n'));
       }
