@@ -96,7 +96,7 @@ export default function DashboardPage() {
 
   return <main className="workspace">
     <header className="topbar"><div><p className="eyebrow">NIRNAY WORKSPACE</p><h1>Welcome{user?.displayName ? ', ' + user.displayName : ''}</h1></div>
-      <div className="topbar-actions">{profile?.role === 'admin' && <a className="button-secondary" href="/admin">Admin panel</a>}<span className="user-pill">{user?.email || 'Signed in'}</span><button className="button-secondary" onClick={() => void signOut()}>Sign out</button></div>
+      <div className="topbar-actions"><a className="button-secondary" href="/tenders">Tenders & applications</a>{profile?.role === 'admin' && <a className="button-secondary" href="/admin">Admin panel</a>}<span className="user-pill">{user?.email || 'Signed in'}</span><button className="button-secondary" onClick={() => void signOut()}>Sign out</button></div>
     </header>
     {error && <div className="error-box" role="alert">{error}</div>}
     {message && <div className="success-box" role="status">{message}</div>}
