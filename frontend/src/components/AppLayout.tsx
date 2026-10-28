@@ -26,7 +26,6 @@ export default function AppLayout() {
     return () => { active = false; };
   }, [location.pathname]);
 
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   return <div className="app-frame">
     <aside className={'sidebar' + (menuOpen ? ' sidebar-open' : '')}>
@@ -36,11 +35,11 @@ export default function AppLayout() {
       </NavLink>
       <p className="nav-caption">WORKSPACE</p>
       <nav className="primary-nav" aria-label="Main navigation">
-        {links.map(item => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}>
+        {links.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setMenuOpen(false)} className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}>
           <item.icon size={18} strokeWidth={1.9} /><span>{item.label}</span>
         </NavLink>)}
       </nav>
-      {profile?.role === 'admin' && <><p className="nav-caption nav-caption-spaced">ADMINISTRATION</p><nav className="primary-nav" aria-label="Administration"><NavLink to="/admin" className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}><ShieldCheck size={18} strokeWidth={1.9} /><span>Admin console</span></NavLink></nav></>}
+      {profile?.role === 'admin' && <><p className="nav-caption nav-caption-spaced">ADMINISTRATION</p><nav className="primary-nav" aria-label="Administration"><NavLink to="/admin" onClick={() => setMenuOpen(false)} className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}><ShieldCheck size={18} strokeWidth={1.9} /><span>Admin console</span></NavLink></nav></>}
       <div className="sidebar-bottom">
         <div className="account-summary"><span className="account-avatar">{(user?.displayName || user?.email || 'N').charAt(0).toUpperCase()}</span><span className="account-copy"><strong>{user?.displayName || 'Signed in'}</strong><small>{user?.email || 'NIRNAY account'}</small></span></div>
         <button className="signout-link" onClick={() => void signOut()}><LogOut size={17} /><span>Sign out</span></button>
