@@ -30,8 +30,22 @@ export default function AdminPage() {
 
   useEffect(() => {
     let alive = true;
-    load().catch(e => { if (alive) setError(e instanceof Error ? e.message : 'Unable to load admin data.'); })
-      .finally(() => { if (alive) setLoading(false); });
+    Promise.all([
+      apiRequest<UserProfile>('/api/v1/auth/me'),
+      apiRequest<Stats>('/api/v1/admin/overview'),
+      apiRequest<{ items: Person[] }>('/api/v1/admin/users?limit=50'),
+      apiRequest<{ items: Audit[] }>('/api/v1/admin/audit?limit=30'),
+    ]).then(result => {
+      if (!alive) return;
+      setProfile(result[0]);
+      setStats(result[1]);
+      setPeople(result[2].items);
+      setEvents(result[3].items);
+    }).catch(e => {
+      if (alive) setError(e instanceof Error ? e.message : 'Unable to load admin data.');
+    }).finally(() => {
+      if (alive) setLoading(false);
+    });
     return () => { alive = false; };
   }, []);
 
