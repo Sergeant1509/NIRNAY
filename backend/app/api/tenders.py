@@ -45,6 +45,19 @@ def _can_manage(user: dict[str, Any]) -> None:
         raise HTTPException(status_code=403, detail="Tender management requires reviewer or administrator access.")
 
 
+
+
+def _audit(user: dict[str, Any], action: str, target_id: str, details: dict[str, Any]) -> None:
+    get_firestore_client().collection("admin_audit_logs").add({
+        "actorUid": user["uid"],
+        "actorEmail": user.get("email"),
+        "action": action,
+        "targetUid": target_id,
+        "details": details,
+        "createdAt": firestore.SERVER_TIMESTAMP,
+    })
+
+
 def _serialize(snapshot: Any) -> dict[str, Any]:
     data = snapshot.to_dict() or {}
     for key in ("createdAt", "updatedAt", "deadline"):
@@ -108,6 +121,7 @@ def create_tender(body: TenderCreate, user: dict[str, Any] = Depends(require_use
     }
     ref = db.collection("tenders").document(tender_id)
     ref.set(data)
+    _audit(user, "tender.created", tender_id, {"tender_number": data["tender_number"], "status": data["status"]})
     return _serialize(ref.get())
 
 
@@ -129,4 +143,5 @@ def update_tender_status(tender_id: str, body: TenderStatusUpdate, user: dict[st
     if not ref.get().exists:
         raise HTTPException(status_code=404, detail="Tender not found.")
     ref.update({"status": body.status, "updatedAt": datetime.now(timezone.utc), "updatedBy": user["uid"]})
+    _audit(user, "tender.status.updated", tender_id, {"status": body.status})
     return _serialize(ref.get())
