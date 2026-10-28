@@ -15,6 +15,7 @@ from app.core.security import require_user
 router = APIRouter(prefix="/api/v1/tender-documents", tags=["Tender document extraction"])
 MAX_BYTES = 15 * 1024 * 1024
 MAX_PAGES = 30
+MAX_IMAGE_PIXELS = 30000000
 ALLOWED = {".pdf", ".png", ".jpg", ".jpeg"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
@@ -63,6 +64,10 @@ def _extract_text(content: bytes, extension: str) -> tuple[str, str]:
                     pages.append(pytesseract.image_to_string(image, config="--psm 3"))
                 text = "\n".join(pages).strip()
             elif extension in IMAGE_EXTENSIONS:
+                image = Image.open(io.BytesIO(content))
+                if image.width * image.height > MAX_IMAGE_PIXELS:
+                    raise HTTPException(status_code=413, detail="Image dimensions exceed the OCR processing limit.")
+                image.verify()
                 image = Image.open(io.BytesIO(content))
                 image = ImageOps.grayscale(image)
                 text = pytesseract.image_to_string(image, config="--psm 3").strip()
