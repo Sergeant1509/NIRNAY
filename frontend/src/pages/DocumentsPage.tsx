@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { FileText, FileUp, Download, Trash2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { apiDownload, apiRequest, type UserDocument } from '../lib/api';
 
@@ -14,13 +14,13 @@ export default function DocumentsPage() {
   const [message, setMessage] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError('');
     try { setDocuments(await apiRequest<UserDocument[]>('/api/v1/documents')); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not load documents.'); }
     finally { setLoading(false); }
-  }
-  useEffect(() => { void load(); }, []);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
 
   async function upload(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
