@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.core.firebase import get_firestore_client
 from app.core.security import require_user
+from app.services.document_extraction import extract_document_text
 
 router = APIRouter(prefix="/api/v1/applications", tags=["Applications"])
 ApplicationStatus = Literal["draft", "submitted", "under_review"]
@@ -102,19 +103,46 @@ def evaluate_application(application_id: str, user: dict[str, Any] = Depends(req
     if not tender_snapshot.exists:
         raise HTTPException(status_code=409, detail="The linked tender no longer exists.")
     tender = tender_snapshot.to_dict() or {}
+    document_ids = application.get("documentIds", [])
+    if len(document_ids) > 10:
+        raise HTTPException(status_code=413, detail="Preliminary screening is limited to 10 selected documents per run.")
     owned_documents = _user_documents(application.get("bidderUid", ""))
-    selected = [owned_documents[doc_id] for doc_id in application.get("documentIds", []) if doc_id in owned_documents]
-    filenames = [str(item.get("filename", "")).casefold() for item in selected]
+    selected = [(doc_id, owned_documents[doc_id]) for doc_id in document_ids if doc_id in owned_documents]
+    extracted = {}
+    extraction_errors = {}
+    for doc_id, metadata in selected:
+        try:
+            extracted[doc_id] = extract_document_text(metadata).casefold()
+        except Exception as exc:
+            # Keep private storage URLs and provider details out of API responses.
+            extraction_errors[doc_id] = type(exc).__name__
+
     findings = []
     for requirement in tender.get("requirements", []):
-        expected = [str(value).casefold() for value in requirement.get("expected_evidence", [])]
-        matched = [name for name in filenames if any(term and (term in name or name in term) for term in expected)]
-        if matched:
+        expected = [str(value).strip().casefold() for value in requirement.get("expected_evidence", []) if str(value).strip()]
+        matched = []
+        matched_phrases = []
+        for doc_id, metadata in selected:
+            filename = str(metadata.get("filename", ""))
+            content = extracted.get(doc_id, "")
+            filename_match = any(term in filename.casefold() for term in expected)
+            content_matches = [term for term in expected if term in content]
+            if filename_match or content_matches:
+                matched.append(filename)
+            matched_phrases.extend(content_matches)
+
+        if matched_phrases:
             outcome = "needs_review"
-            reason = "A filename appears relevant, but document contents and authenticity have not been verified."
+            reason = "One or more expected evidence phrases were found in extracted document text. Verify the actual clause, values, dates, validity, and authenticity before deciding compliance."
+        elif extraction_errors:
+            outcome = "needs_review"
+            reason = "Some selected documents could not be read, so absence of evidence cannot be established. Check extraction status and review the original files."
+        elif matched:
+            outcome = "needs_review"
+            reason = "A filename appears relevant, but the expected phrase was not found in readable document text. Human review is required."
         elif requirement.get("mandatory", True):
             outcome = "missing"
-            reason = "No selected document filename matches the expected evidence labels."
+            reason = "No expected evidence phrase was found in the readable contents or filenames of selected documents."
         else:
             outcome = "needs_review"
             reason = "Optional requirement requires a reviewer decision."
@@ -124,6 +152,7 @@ def evaluate_application(application_id: str, user: dict[str, Any] = Depends(req
             "mandatory": requirement.get("mandatory", True),
             "outcome": outcome,
             "matched_filenames": matched,
+            "matched_evidence_phrases": sorted(set(matched_phrases)),
             "reason": reason,
         })
     result_id = "vr_" + uuid4().hex
@@ -133,7 +162,9 @@ def evaluate_application(application_id: str, user: dict[str, Any] = Depends(req
         "tenderId": application.get("tenderId"),
         "status": "needs_review" if any(item["outcome"] == "needs_review" for item in findings) else "incomplete",
         "findings": findings,
-        "method": "filename_screening_v1",
+        "method": "document_content_phrase_screening_v1",
+        "documents_read": len(extracted),
+        "documents_unreadable": len(extraction_errors),
         "disclaimer": "This preliminary screen uses filenames only. It does not read document contents, verify signatures, or establish legal compliance. Human review is required.",
         "createdBy": user["uid"],
         "createdAt": datetime.now(timezone.utc),
