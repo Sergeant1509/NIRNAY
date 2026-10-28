@@ -125,6 +125,9 @@ export default function TendersPage() {
         <label>Tender title<input required minLength={3} value={title} onChange={e => setTitle(e.target.value)} /></label>
         <label>Issuing organization<input required value={issuer} onChange={e => setIssuer(e.target.value)} /></label>
         <label>Description<textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} /></label>
+        <label>Submission deadline<input type="datetime-local" value={deadline} onChange={e => setDeadline(e.target.value)} /></label>
+        <label>EMD amount<input value={emdAmount} onChange={e => setEmdAmount(e.target.value)} placeholder="e.g. ₹25,000" /></label>
+        <label>Tender fee<input value={tenderFee} onChange={e => setTenderFee(e.target.value)} placeholder="e.g. ₹1,000" /></label>
         <label className="wide-field">Requirements<textarea required value={requirementsText} onChange={e => setRequirementsText(e.target.value)} rows={3} /></label>
         <button disabled={busy} type="submit">{busy ? 'Saving…' : 'Publish tender'}</button>
       </form>
