@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.tenders import router as tender_router
 from app.api.auth import router as auth_router
+from app.api.admin import router as admin_router
 from app.api.records import router as records_router
 from app.api.documents import router as documents_router
 from app.api.notifications import router as notifications_router
@@ -31,11 +32,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(tender_router)
 app.include_router(auth_router)
+app.include_router(admin_router)
 app.include_router(records_router)
 app.include_router(documents_router)
 app.include_router(notifications_router)
