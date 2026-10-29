@@ -86,7 +86,7 @@ export default function RuleBuilderPage() {
       apiRequest<{ items: RuleSet[]; active_rule_set_id?: string | null }>('/api/v1/tenders/' + encodeURIComponent(tenderId) + '/rule-sets')
         .then(response => { if (alive) { setRuleSets(response.items); setActiveRuleSetId(response.active_rule_set_id || response.items[0]?.id || ''); } })
         .catch(e => { if (alive) setError(e instanceof Error ? e.message : 'Could not load rule sets.'); });
-    } else { setRuleSets([]); setActiveRuleSetId(''); }
+    }
     return () => { alive = false; };
   }, [tenderId]);
 
@@ -153,7 +153,7 @@ export default function RuleBuilderPage() {
     <header className="rule-header"><div><p className="eyebrow">NIRNAY / CONFIGURATION</p><h1>Tender rule builder</h1><p className="rule-muted">Create versioned rules from each tender. Drafts require reviewer approval before bidder evaluation.</p></div><button className="rule-button secondary" onClick={() => void refresh()} disabled={busy || !tenderId}><RefreshCw size={16}/> Refresh</button></header>
     {error && <div className="rule-alert error" role="alert">{error}</div>}{notice && <div className="rule-alert success" role="status">{notice}</div>}
     <section className="rule-panel rule-toolbar">
-      <label>Choose tender<select value={tenderId} onChange={e => { setTenderId(e.target.value); setResultText(''); }}><option value="">Select a tender</option>{tenders.map(tender => <option key={tender.id} value={tender.id}>{tender.tender_number} — {tender.title}</option>)}</select></label>
+      <label>Choose tender<select value={tenderId} onChange={e => { const value = e.target.value; setTenderId(value); setResultText(''); if (!value) { setRuleSets([]); setActiveRuleSetId(''); } }}><option value="">Select a tender</option>{tenders.map(tender => <option key={tender.id} value={tender.id}>{tender.tender_number} — {tender.title}</option>)}</select></label>
       <label>Rule-set version<select value={activeRuleSetId} onChange={e => setActiveRuleSetId(e.target.value)}><option value="">New draft</option>{ruleSets.map(item => <option key={item.id} value={item.id}>v{item.version} · {item.status} · {item.name}</option>)}</select></label>
       <div className="rule-toolbar-actions"><button className="rule-button secondary" disabled={!selectedRuleSet} onClick={loadSelected}>Load selected</button><button className="rule-button secondary" disabled={!selectedRuleSet || selectedRuleSet.status !== 'draft' || busy} onClick={() => { if (!selectedRuleSet) return; setRulesText(pretty([...selectedRuleSet.rules, blankRule(selectedRuleSet.rules.length + 1)])); }}><Plus size={16}/> Add rule</button></div>
     </section>
