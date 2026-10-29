@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Files, ClipboardList, FolderKanban, ShieldCheck, LogOut, Menu, X, Scale, SlidersHorizontal } from 'lucide-react';
+import { LayoutDashboard, Files, ClipboardList, FolderKanban, ShieldCheck, LogOut, Menu, X, Scale, SlidersHorizontal, FileSearch } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { apiRequest, type UserProfile } from '../lib/api';
 import './AppLayout.css';
@@ -9,6 +9,7 @@ const links = [
   { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/records', label: 'My records', icon: ClipboardList },
   { to: '/documents', label: 'Documents', icon: Files },
+  { to: '/verification', label: 'Document verification', icon: FileSearch },
   { to: '/tenders', label: 'Tenders & applications', icon: FolderKanban },
 ];
 
