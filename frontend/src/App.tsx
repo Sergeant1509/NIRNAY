@@ -6,6 +6,7 @@ import AppLayout from './components/AppLayout';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import TendersPage from './pages/TendersPage';
+import RuleBuilderPage from './pages/RuleBuilderPage';
 import RecordsPage from './pages/RecordsPage';
 import DocumentsPage from './pages/DocumentsPage';
 import LoginPage from './pages/LoginPage';
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/documents" element={<DocumentsPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/tenders" element={<TendersPage />} />
+      <Route path="/rules" element={<RuleBuilderPage />} />
     </Route></Route>
     <Route path="*" element={<HomeRedirect />} />
   </Routes></AuthProvider></BrowserRouter>;

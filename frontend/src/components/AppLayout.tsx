@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Files, ClipboardList, FolderKanban, ShieldCheck, LogOut, Menu, X, Scale } from 'lucide-react';
+import { LayoutDashboard, Files, ClipboardList, FolderKanban, ShieldCheck, LogOut, Menu, X, Scale, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { apiRequest, type UserProfile } from '../lib/api';
 import './AppLayout.css';
@@ -26,6 +26,9 @@ export default function AppLayout() {
     return () => { active = false; };
   }, [location.pathname]);
 
+  const visibleLinks = profile?.role === 'admin' || profile?.role === 'reviewer'
+    ? [...links, { to: '/rules', label: 'Tender rule builder', icon: SlidersHorizontal }]
+    : links;
 
   return <div className="app-frame">
     <aside className={'sidebar' + (menuOpen ? ' sidebar-open' : '')}>
@@ -35,7 +38,7 @@ export default function AppLayout() {
       </NavLink>
       <p className="nav-caption">WORKSPACE</p>
       <nav className="primary-nav" aria-label="Main navigation">
-        {links.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setMenuOpen(false)} className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}>
+        {visibleLinks.map(item => <NavLink key={item.to} to={item.to} end={'end' in item ? item.end : false} onClick={() => setMenuOpen(false)} className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}>
           <item.icon size={18} strokeWidth={1.9} /><span>{item.label}</span>
         </NavLink>)}
       </nav>

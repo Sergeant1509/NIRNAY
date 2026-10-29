@@ -1,139 +1,43 @@
-# NIRNAY — local development and Firebase setup
+# NIRNAY
 
-NIRNAY uses React + TypeScript + Vite in `frontend/` and FastAPI in `backend/`. Firebase Authentication handles sign-in, Firebase Admin verifies ID tokens, and Cloud Firestore stores application profiles and user records. Push notifications are optional. File uploads use Firebase Storage only when the project has Storage enabled and the selected plan supports it.
+NIRNAY is a procurement document intake and preliminary compliance evidence workspace. It helps reviewers organize tender requirements, bidder evidence, source references, and review outcomes. It is not a legal compliance decision system.
 
-This branch uses **Firestore, not PostgreSQL**. Existing PostgreSQL data is not automatically migrated to Firestore.
+## Dynamic tender rules
 
-## 1. Firebase Console setup
+The reviewer-only **Tender rule builder** creates versioned rule sets per tender. Rules are stored as structured data, can be reviewed before approval, and are evaluated by deterministic code. Approved versions remain identifiable; when a new version is approved, the previous version is retained as superseded. The engine supports numeric thresholds, document presence, accepted-value matching, and AND/OR alternative groups. See [Dynamic Tender Rule Engine](docs/DYNAMIC_RULE_ENGINE.md) for API examples, schema, and limitations.
 
-1. Open [Firebase Console](https://console.firebase.google.com/) and select your project.
-2. Go to **Build → Authentication → Sign-in method** and enable **Email/Password**.
-3. In **Authentication → Settings → Authorized domains**, ensure `localhost` is listed for local testing.
-4. Open **Build → Firestore Database** and create a database (Standard edition; Production mode is fine).
-5. Keep the restrictive `firestore.rules` in this repository deployed. Browser reads/writes are denied; the FastAPI backend verifies the Firebase ID token and scopes requests to the authenticated UID.
-6. Register a **Web app** under **Project settings → General → Your apps** if not already done. Copy the Web App config.
-7. Storage is optional for checking auth and Firestore records. File uploads/downloads require a working Storage bucket; Firebase Storage availability and billing requirements depend on the project/account. Do not enable billing unless you have decided to use a paid plan.
+The extraction layer can suggest clauses and fields from text PDFs, scanned PDFs, and images. Treat all extracted values and rule proposals as drafts. Reviewers must confirm every rule against the original tender and any corrigenda before approval.
 
-## 2. Configure frontend Firebase values
+## Local development
 
-From PowerShell in the repository root:
+### Backend
 
-```powershell
-Copy-Item frontend/.env.example frontend/.env.local
-notepad frontend/.env.local
-```
-
-Replace the placeholders using **Project settings → General → Your apps → SDK setup and configuration**:
-
-```dotenv
-VITE_FIREBASE_API_KEY=your-web-api-key
-VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-real-bucket-name
-VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-VITE_FIREBASE_APP_ID=your-web-app-id
-VITE_FIREBASE_VAPID_KEY=your-web-push-public-vapid-key
-VITE_API_BASE_URL=
-```
-
-- `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, and `VITE_FIREBASE_APP_ID` come from Web App config.
-- `VITE_FIREBASE_STORAGE_BUCKET` must be copied exactly from Firebase Console; do not guess the suffix.
-- `VITE_FIREBASE_VAPID_KEY` is only needed for web push: **Project settings → Cloud Messaging → Web Push certificates**.
-- Keep `VITE_API_BASE_URL=` blank for local Vite proxying.
-- Never put a Firebase Admin service-account private key in any `VITE_*` setting.
-
-## 3. Configure Firebase Admin for the backend
-
-1. Open **Project settings → Service accounts** and generate a private key for local development.
-2. Save the downloaded JSON at `backend/service-account.json`.
-3. Create the backend environment file:
-
-```powershell
-Copy-Item backend/.env.example backend/.env
-notepad backend/.env
-```
-
-Set these values:
-
-```dotenv
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_STORAGE_BUCKET=your-real-bucket-name
-GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-ENABLE_TEST_NOTIFICATIONS=false
-```
-
-Use the exact same project ID as the frontend. Bucket configuration is only needed for file storage. The credential path is relative to the backend working directory, so start Uvicorn from `backend/`. **Never commit or share `service-account.json` or `.env` files.**
-
-## 4. Firestore data layout
-
-You do not need to create the app collections manually. The backend writes records when the app is used:
-
-- `users/{firebase_uid}` — user profile.
-- `users/{firebase_uid}/records/{record_id}` — saved records.
-- `users/{firebase_uid}/documents/{document_id}` — document metadata (requires Storage for actual file bytes).
-- `users/{firebase_uid}/fcmInstallations/{installation_id}` — notification registration tokens.
-
-The Firebase Admin SDK bypasses Firestore Security Rules, so the backend must continue verifying ID tokens and scoping operations to the verified UID. Do not replace the rules with public read/write access.
-
-## 5. Run the backend (PowerShell terminal 1)
-
-Open PowerShell at the repository root, then run:
+From the repository root:
 
 ```powershell
 cd backend
-py -m venv venv
-.\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
 ```
 
-If PowerShell blocks environment activation, run this in the same terminal, then activate again:
+Open `http://127.0.0.1:8000/docs` for the API. Local development needs a configured Firebase Admin identity and environment variables; do not commit `.env` or service-account credentials. OCR for scanned documents requires the Tesseract engine installed on the host. On Windows, configure the executable path in the process environment or module configuration.
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\venv\Scripts\Activate.ps1
-```
+### Frontend
 
-If you already made a virtual environment, activate it instead of creating another one.
-
-## 6. Run the frontend (PowerShell terminal 2)
-
-Open a second terminal at the repository root:
+In a second terminal:
 
 ```powershell
 cd frontend
 npm install
-npm run lint
-npm run build
 npm run dev
 ```
 
-Open `http://localhost:5173`. Backend health: `http://127.0.0.1:8000/healthz`. API docs: `http://127.0.0.1:8000/docs`.
+Use the URL printed by Vite, typically `http://localhost:5173`. Configure `VITE_API_BASE_URL` in the local frontend environment when the API is not served from the same origin.
 
-## 7. Test before merging/deploying
+## Validation and limitations
 
-1. Visit `http://localhost:5173/register`, create a test account, and sign in.
-2. Save a test record.
-3. In Firebase Console → Firestore → Data, verify a user profile and record under `users/{firebase_uid}/records`.
-4. Create a second test account and confirm it cannot see the first account's records.
-5. Run `npm run lint` and `npm run build` from `frontend/` and ensure both succeed.
-6. Upload/download testing is separate and only works after Storage is configured and supported.
+Run backend tests with `python -m pytest -q`, and frontend checks with `npm run build` and `npm run lint`. Live Firebase/Cloudinary end-to-end tests require a configured development environment.
 
-## 8. Optional browser notifications
-
-1. Configure Cloud Messaging and the public Web Push VAPID key.
-2. Set `VITE_FIREBASE_VAPID_KEY` in `frontend/.env.local` and restart Vite after changing environment variables.
-3. Grant browser notification permission when prompted.
-4. Leave `ENABLE_TEST_NOTIFICATIONS=false` except for a brief, deliberate test. Turn it off again afterward.
-
-Auth and Firestore record testing do not require push notifications or Firebase Storage.
-
-## 9. Tender document OCR intake
-
-The Tenders page includes an **Auto-fill from tender document** uploader. It accepts PDF files and PNG/JPG screenshots or images up to 15 MiB. The backend first extracts embedded PDF text; if a PDF has little or no embedded text, or an image is uploaded, it uses Tesseract OCR. It then suggests tender number, title, issuing organization, submission deadline, EMD, tender fee, and likely requirement clauses where recognizable. Extracted fields are suggestions, not verified facts; reviewers must compare them with the original tender before publishing.
-
-The Python packages for PDF reading/rendering and OCR are listed in `backend/requirements.txt`. **Scanned PDFs and images require the Tesseract OCR engine installed on the backend host** in addition to those Python packages. For Windows local development, install Tesseract OCR and ensure `tesseract.exe` is available on `PATH`; restart the terminal/backend afterward. Text-based PDFs do not need Tesseract unless OCR fallback is required. On Linux deployment, install the host's `tesseract-ocr` package. The OCR endpoint is authenticated and processes the upload in memory; it does not save the tender file to Cloudinary or Firestore.
-
-The endpoint also returns normalized key/value pairs and cleaned text lines to help organize scattered information. This is an initial extraction layer, not a universal parser: it may miss fields or misread complex tables, handwriting, Hindi or mixed-language text, multi-column layouts, or low-quality screenshots. The application screening workflow also extracts text from selected private PDF, image, DOCX, XLSX, and TXT evidence files and compares expected-evidence phrases with the extracted content. Phrase matches are marked for human review, never automatically declared compliant. This is a first-stage intake feature, not a substitute for human review or a legal compliance determination.
+The rules engine evaluates structured evidence values; it does not independently authenticate documents, verify signatures or registry status, establish legal compliance, or automatically interpret every tender clause. All AI/OCR-extracted rules require reviewer approval, and ambiguous or missing evidence must remain under human review. Firebase Storage is not required; private document storage remains on the configured Cloudinary integration.
