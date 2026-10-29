@@ -1,9 +1,10 @@
 import os
 from functools import lru_cache
+import time
 
 import cloudinary
 import cloudinary.uploader
-from cloudinary.utils import cloudinary_url
+from cloudinary.utils import private_download_url
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -44,17 +45,19 @@ def upload_file(content: bytes, public_id: str) -> dict:
 
 
 def get_signed_download_url(public_id: str) -> str:
+    """Create a short-lived server-to-server download URL for an authenticated raw asset."""
     configure_cloudinary()
+    extension = public_id.rsplit(".", 1)[-1].lower() if "." in public_id.rsplit("/", 1)[-1] else ""
+    if not extension:
+        raise ValueError("Cloudinary raw asset public ID is missing its file extension.")
 
-    url, _ = cloudinary_url(
+    return private_download_url(
         public_id,
+        extension,
         resource_type="raw",
         type="authenticated",
-        sign_url=True,
-        secure=True,
+        expires_at=int(time.time()) + 300,
     )
-
-    return url
 
 
 def delete_file(public_id: str) -> dict:

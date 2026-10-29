@@ -1,120 +1,62 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight, BellRing, FileText, ClipboardCheck, Files, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
-import { apiDownload, apiRequest, type UserDocument, type UserProfile, type UserRecord } from '../lib/api';
+import { apiRequest, type UserDocument, type UserProfile, type UserRecord } from '../lib/api';
 import { enablePushNotifications, listenForForegroundNotifications, resumePushNotificationsIfAllowed } from '../services/notifications';
 
+type ApplicationSummary = { id: string; tenderTitle?: string; tender_title?: string; status: string; createdAt?: string; created_at?: string };
+
 export default function DashboardPage() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [records, setRecords] = useState<UserRecord[]>([]);
   const [documents, setDocuments] = useState<UserDocument[]>([]);
-  const [title, setTitle] = useState('');
-  const [note, setNote] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [message, setMessage] = useState('');
+  const [applications, setApplications] = useState<ApplicationSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const loadData = useCallback(async () => {
-    const [p, r, d] = await Promise.all([
+  useEffect(() => {
+    let active = true;
+    Promise.all([
       apiRequest<UserProfile>('/api/v1/auth/me'),
       apiRequest<UserRecord[]>('/api/v1/records'),
       apiRequest<UserDocument[]>('/api/v1/documents'),
-    ]);
-    setProfile(p); setRecords(r); setDocuments(d);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadInitialData = async () => {
-      try {
-        const [p, r, d] = await Promise.all([
-          apiRequest<UserProfile>('/api/v1/auth/me'),
-          apiRequest<UserRecord[]>('/api/v1/records'),
-          apiRequest<UserDocument[]>('/api/v1/documents'),
-        ]);
-        if (cancelled) return;
-        setProfile(p); setRecords(r); setDocuments(d);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load workspace data.');
-      }
-    };
-    void loadInitialData();
+      apiRequest<{ items: ApplicationSummary[] }>('/api/v1/applications'),
+    ]).then(([p, r, d, a]) => {
+      if (!active) return;
+      setProfile(p); setRecords(r); setDocuments(d); setApplications(a.items);
+    }).catch(e => {
+      if (active) setError(e instanceof Error ? e.message : 'Could not load your workspace overview.');
+    }).finally(() => { if (active) setLoading(false); });
     resumePushNotificationsIfAllowed().catch(() => undefined);
-    let stop: (() => void) | undefined;
+    let unsubscribe: (() => void) | undefined;
     listenForForegroundNotifications(payload => {
-      setMessage((payload.notification?.title || 'NIRNAY update') + ': ' + (payload.notification?.body || 'You have a new update.'));
-    }).then(unsubscribe => { if (cancelled) unsubscribe(); else stop = unsubscribe; }).catch(() => undefined);
-    return () => { cancelled = true; stop?.(); };
+      if (active) setMessage((payload.notification?.title || 'NIRNAY update') + ': ' + (payload.notification?.body || 'You have a new update.'));
+    }).then(stop => { if (active) unsubscribe = stop; else stop(); }).catch(() => undefined);
+    return () => { active = false; unsubscribe?.(); };
   }, []);
 
-  async function createRecord(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setBusy(true); setError(''); setMessage('');
-    try {
-      await apiRequest<UserRecord>('/api/v1/records', { method: 'POST', body: JSON.stringify({ title, kind: 'verification_note', data: { note } }) });
-      setTitle(''); setNote(''); await loadData(); setMessage('Record saved in your private workspace.');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not save record.'); }
-    finally { setBusy(false); }
-  }
-  async function uploadDocument(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!file) { setError('Choose a file first.'); return; }
-    setBusy(true); setError(''); setMessage('');
-    try {
-      const form = new FormData(); form.append('file', file);
-      await apiRequest<UserDocument>('/api/v1/documents', { method: 'POST', body: form });
-      setFile(null);
-      const input = window.document.getElementById('document-file') as HTMLInputElement | null;
-      if (input) input.value = '';
-      await loadData(); setMessage('Document uploaded to private Firebase Storage.');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not upload document.'); }
-    finally { setBusy(false); }
-  }
-  async function downloadDocument(doc: UserDocument) {
-    setError(''); setMessage('');
-    try {
-      const blob = await apiDownload('/api/v1/documents/' + encodeURIComponent(doc.id) + '/download');
-      const url = URL.createObjectURL(blob); const anchor = window.document.createElement('a');
-      anchor.href = url; anchor.download = doc.filename; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not download document.'); }
-  }
-  async function deleteDocument(doc: UserDocument) {
-    setError(''); setMessage('');
-    try { await apiRequest<void>('/api/v1/documents/' + encodeURIComponent(doc.id), { method: 'DELETE' }); await loadData(); setMessage('Document deleted.'); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Could not delete document.'); }
-  }
-  async function deleteRecord(id: string) {
-    setError(''); setMessage('');
-    try { await apiRequest<void>('/api/v1/records/' + encodeURIComponent(id), { method: 'DELETE' }); await loadData(); setMessage('Record deleted.'); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Could not delete record.'); }
-  }
-  async function enableNotifications() {
+  async function turnOnNotifications() {
     setError(''); setMessage('');
     try { await enablePushNotifications(); setMessage('Push notifications enabled for this browser.'); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Could not enable notifications.'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not enable notifications.'); }
   }
 
   return <main className="workspace">
-    <header className="topbar"><div><p className="eyebrow">NIRNAY WORKSPACE</p><h1>Welcome{user?.displayName ? ', ' + user.displayName : ''}</h1></div>
-      <div className="topbar-actions"><span className="user-pill">{user?.email || 'Signed in'}</span><button className="button-secondary" onClick={() => void signOut()}>Sign out</button></div>
-    </header>
-    {error && <div className="error-box" role="alert">{error}</div>}
-    {message && <div className="success-box" role="status">{message}</div>}
-    <section className="summary-grid">
-      <article className="panel"><p className="eyebrow">ACCOUNT</p><h2>{profile?.display_name || user?.displayName || 'NIRNAY user'}</h2><p className="muted">{profile?.email || user?.email}</p><span className={'status-chip ' + (profile?.email_verified ? 'status-good' : '')}>{profile?.email_verified ? 'Email verified' : 'Email not verified'}</span></article>
-      <article className="panel"><p className="eyebrow">SAVED RECORDS</p><h2 className="big-number">{records.length}</h2><p className="muted">Stored under your authenticated Firebase UID.</p></article>
-      <article className="panel"><p className="eyebrow">NOTIFICATIONS</p><h2>Stay updated</h2><p className="muted">Enable browser push for trusted NIRNAY backend workflows.</p><button onClick={() => void enableNotifications()}>Enable notifications</button></article>
+    <header className="page-heading"><div><p className="eyebrow">WORKSPACE / OVERVIEW</p><h1>Good to see you{user?.displayName ? ', ' + user.displayName.split(' ')[0] : ''}</h1><p className="muted">A clear view of your procurement workspace and recent activity.</p></div><span className="role-chip"><ShieldCheck size={15}/>{profile?.role || 'user'} account</span></header>
+    {error && <div className="error-box" role="alert">{error}</div>}{message && <div className="success-box" role="status">{message}</div>}
+    <section className="overview-welcome"><div><p className="eyebrow">NIRNAY WORKSPACE</p><h2>Documents, tenders, and decisions — in one place.</h2><p>Manage your evidence library and keep track of tender applications from a single workspace.</p><Link className="welcome-action" to="/tenders">Open tenders & applications <ArrowUpRight size={16}/></Link></div><div className="welcome-symbol"><ClipboardCheck size={62} strokeWidth={1.15}/></div></section>
+    <section className="overview-stats" aria-label="Workspace totals">
+      <Link to="/records" className="overview-stat"><span className="stat-icon"><ClipboardCheck size={19}/></span><span className="stat-label">My records</span><strong>{loading ? '—' : records.length}</strong><small>Saved notes and records <ArrowUpRight size={13}/></small></Link>
+      <Link to="/documents" className="overview-stat"><span className="stat-icon"><Files size={19}/></span><span className="stat-label">Documents</span><strong>{loading ? '—' : documents.length}</strong><small>Private uploaded files <ArrowUpRight size={13}/></small></Link>
+      <Link to="/tenders" className="overview-stat"><span className="stat-icon"><FileText size={19}/></span><span className="stat-label">Applications</span><strong>{loading ? '—' : applications.length}</strong><small>Your submitted applications <ArrowUpRight size={13}/></small></Link>
     </section>
-    <section className="content-grid">
-      <article className="panel"><p className="eyebrow">FIRESTORE VIA FASTAPI</p><h2>Save a record</h2><p className="muted">Sample note storage; adapt it to tender and verification entities.</p>
-        <form onSubmit={createRecord} className="form-stack"><label>Record title<input required maxLength={160} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Review GST certificate" /></label><label>Note<textarea rows={4} value={note} onChange={e => setNote(e.target.value)} placeholder="Add a short note or reminder" /></label><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save record'}</button></form>
-      </article>
-      <article className="panel"><p className="eyebrow">YOUR RECORDS</p><h2>Recent records</h2>{records.length === 0 ? <p className="muted">No saved records yet.</p> : <ul className="record-list">{records.map(r => <li key={r.id}><div><strong>{r.title}</strong><p className="muted">{r.kind.replace('_', ' ')} · {r.created_at ? new Date(r.created_at).toLocaleString() : 'just now'}</p>{typeof r.data.note === 'string' && <p>{r.data.note}</p>}</div><button className="button-danger" onClick={() => void deleteRecord(r.id)}>Delete</button></li>)}</ul>}</article>
-      <article className="panel"><p className="eyebrow">FIREBASE STORAGE</p><h2>Private tender documents</h2><p className="muted">PDF, PNG/JPG, DOCX, XLSX, or TXT; maximum 15 MiB per upload.</p>
-        <form onSubmit={uploadDocument} className="form-stack"><label>Choose a document<input id="document-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.txt" required onChange={e => setFile(e.target.files?.[0] || null)} /></label><button type="submit" disabled={busy || !file}>{busy ? 'Uploading…' : 'Upload document'}</button></form>
-        {documents.length === 0 ? <p className="muted">No uploaded documents yet.</p> : <ul className="record-list">{documents.map(d => <li key={d.id}><div><strong>{d.filename}</strong><p className="muted">{(d.size_bytes / 1024).toFixed(1)} KB · {d.created_at ? new Date(d.created_at).toLocaleString() : 'just now'}</p><button className="button-secondary" onClick={() => void downloadDocument(d)}>Download</button></div><button className="button-danger" onClick={() => void deleteDocument(d)}>Delete</button></li>)}</ul>}
-      </article>
+    <section className="overview-bottom-grid">
+      <article className="panel overview-panel"><p className="eyebrow">QUICK ACCESS</p><h2>Continue your work</h2><div className="quick-link-list"><Link to="/documents"><span className="quick-link-icon"><Files size={18}/></span><span><strong>Document library</strong><small>Upload or download tender evidence</small></span><ArrowUpRight size={16}/></Link><Link to="/records"><span className="quick-link-icon"><ClipboardCheck size={18}/></span><span><strong>My records</strong><small>Keep review notes and working records</small></span><ArrowUpRight size={16}/></Link><Link to="/tenders"><span className="quick-link-icon"><FileText size={18}/></span><span><strong>Tenders & applications</strong><small>Browse tenders and manage submissions</small></span><ArrowUpRight size={16}/></Link></div></article>
+      <article className="panel overview-panel notification-panel"><span className="section-icon"><BellRing size={19}/></span><p className="eyebrow">NOTIFICATIONS</p><h2>Keep up with updates</h2><p className="muted">Allow browser notifications for supported NIRNAY updates on this device.</p><button onClick={() => void turnOnNotifications()}>Enable notifications</button><p className="fine-print">You can continue using the workspace without enabling notifications.</p></article>
     </section>
-    <footer className="page-footer">Firebase Authentication verifies identity · FastAPI authorizes access · Firestore stores records · Storage stores private files.</footer>
+    <footer className="page-footer">Signed in as {profile?.email || user?.email || 'your account'} · Access is controlled by the NIRNAY API.</footer>
   </main>;
 }

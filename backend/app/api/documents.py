@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import uuid
@@ -24,6 +25,8 @@ from app.core.cloudinary_storage import (
 )
 from app.core.firebase import get_firestore_client
 from app.core.security import require_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
 
@@ -251,9 +254,18 @@ def download_document(
     except HTTPException:
         raise
     except Exception as exc:
+        # Log the exception category and safe status details only. Do not log
+        # signed URLs, API credentials, or request authorization headers.
+        remote_status = getattr(exc, "code", None)
+        logger.error(
+            "Document download failed: document_id=%s exception_type=%s remote_status=%s",
+            document_id,
+            type(exc).__name__,
+            remote_status,
+        )
         raise HTTPException(
             status_code=502,
-            detail="The document could not be retrieved from Cloudinary.",
+            detail="The document could not be retrieved from Cloudinary. Check backend logs for the safe diagnostic code.",
         ) from exc
 
     filename = clean_filename(item.get("filename"))
