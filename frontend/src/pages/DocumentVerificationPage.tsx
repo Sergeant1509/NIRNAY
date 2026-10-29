@@ -162,7 +162,7 @@ export default function DocumentVerificationPage() {
 
     <section className="verification-panel">
       <div className="verification-section-title"><span className="verification-icon"><FileCheck2 size={20}/></span><div><h2>Demo document wallet</h2><p>Open a synthetic report to demonstrate pass, missing-evidence and manual-review states without uploading a real identity document.</p></div></div>
-      <div className="demo-document-grid">{sampleReports.map(sample => <button className="demo-document-card" key={sample.filename} onClick={() => showSample(sample.report)}><span className="demo-document-symbol"><FileCheck2 size={19}/></span><strong>{sample.title}</strong><span>{sample.description}</span><small>Open demo report →</small></button>)}</div>
+      <div className="demo-document-grid">{sampleReports.map(sample => <button className="demo-document-card" key={sample.report.filename} onClick={() => showSample(sample.report)}><span className="demo-document-symbol"><FileCheck2 size={19}/></span><strong>{sample.title}</strong><span>{sample.description}</span><small>Open demo report →</small></button>)}</div>
     </section>
 
     {report && <section className="verification-panel verification-report" aria-live="polite">
