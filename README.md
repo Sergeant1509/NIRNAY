@@ -2,6 +2,12 @@
 
 NIRNAY is a procurement document intake and preliminary compliance evidence workspace. It helps reviewers organize tender requirements, bidder evidence, source references, and review outcomes. It is not a legal compliance decision system.
 
+## Prototype document verification
+
+The authenticated **Document verification** workspace at `/verification` demonstrates transient document parsing for PDF, scanned PDF/images, DOCX, XLSX and TXT files. It extracts selected fields, reports basic format checks, and explicitly labels issuer authenticity and digital-signature/tampering checks as not checked. The analysis endpoint does not persist uploaded bytes.
+
+This is a student prototype. It does **not** connect to DigiLocker, EntityLocker, GST, MCA, PAN, banks, or issuer APIs. A format match or successful OCR is not proof that a document is genuine. Use synthetic or redacted files only. See [Prototype Document Verification](docs/PROTOTYPE_DOCUMENT_VERIFICATION.md) for endpoint details and limitations.
+
 ## Dynamic tender rules
 
 The reviewer-only **Tender rule builder** creates versioned rule sets per tender. Rules are stored as structured data, can be reviewed before approval, and are evaluated by deterministic code. Approved versions remain identifiable; when a new version is approved, the previous version is retained as superseded. The engine supports numeric thresholds, document presence, accepted-value matching, and AND/OR alternative groups. See [Dynamic Tender Rule Engine](docs/DYNAMIC_RULE_ENGINE.md) for API examples, schema, and limitations.
