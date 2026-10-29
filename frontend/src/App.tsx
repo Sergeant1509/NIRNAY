@@ -9,6 +9,7 @@ import TendersPage from './pages/TendersPage';
 import RuleBuilderPage from './pages/RuleBuilderPage';
 import RecordsPage from './pages/RecordsPage';
 import DocumentsPage from './pages/DocumentsPage';
+import DocumentVerificationPage from './pages/DocumentVerificationPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import './App.css';
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/app" element={<DashboardPage />} />
       <Route path="/records" element={<RecordsPage />} />
       <Route path="/documents" element={<DocumentsPage />} />
+      <Route path="/verification" element={<DocumentVerificationPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/tenders" element={<TendersPage />} />
       <Route path="/rules" element={<RuleBuilderPage />} />
