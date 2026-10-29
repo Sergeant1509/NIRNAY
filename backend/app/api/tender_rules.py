@@ -162,6 +162,8 @@ def evaluate_rule_set(
     tender_id: str, rule_set_id: str, body: RuleEvaluationInput,
     user: dict[str, Any] = Depends(require_user),
 ) -> dict[str, Any]:
+    # This endpoint accepts caller-supplied facts and is a reviewer sandbox, not a bidder decision API.
+    _require_reviewer(user)
     db, tender_ref = _tender_or_404(tender_id)
     tender = tender_ref.get().to_dict() or {}
     reviewer = _role(user) in {"admin", "reviewer"}

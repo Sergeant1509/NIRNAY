@@ -27,9 +27,9 @@ All rules support `source_reference`, `required_evidence`, `condition`, `severit
 - `GET /api/v1/tenders/{tender_id}/rule-sets`
 - `POST /api/v1/tenders/{tender_id}/rule-sets` — reviewer/admin; creates a new draft version.
 - `POST /api/v1/tenders/{tender_id}/rule-sets/{rule_set_id}/approve` — reviewer/admin; activates a draft.
-- `POST /api/v1/tenders/{tender_id}/rule-sets/{rule_set_id}/evaluate` — evaluate a structured `evidence` object.
+- `POST /api/v1/tenders/{tender_id}/rule-sets/{rule_set_id}/evaluate` — reviewer/admin-only sandbox evaluation of a structured `evidence` object; it is not linked to a bidder application.
 
-All endpoints require a Firebase ID token. Tender management/approval requires the verified token to include a reviewer or admin role. Rule sets are stored in Firestore collections `tender_rule_sets`; evaluations are recorded in `tender_rule_evaluations`; create/approve events are written to `admin_audit_logs`.
+All endpoints require a Firebase ID token. Rule creation, approval, and sandbox evaluation require the verified token to include a reviewer or admin role. Non-reviewers can list approved rule sets only. Rule sets are stored in Firestore collections `tender_rule_sets`; evaluations are recorded in `tender_rule_evaluations`; create/approve events are written to `admin_audit_logs`.
 
 ## Evidence payload example
 
