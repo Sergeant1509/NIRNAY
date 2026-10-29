@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.tenders import router as tender_router
 from app.api.tender_document_extraction import router as tender_document_extraction_router
+from app.api.document_verification import router as document_verification_router
 from app.api.tender_rules import router as tender_rules_router
 from app.api.applications import router as applications_router
 from app.api.auth import router as auth_router
@@ -21,7 +22,7 @@ from app.api.notifications import router as notifications_router
 app = FastAPI(
     title="NIRNAY",
     description="Procurement Compliance & Verification System",
-    version="0.4.0",
+    version="0.5.0",
 )
 origins = [
     item.strip()
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 app.include_router(tender_router)
 app.include_router(tender_document_extraction_router)
+app.include_router(document_verification_router)
 app.include_router(tender_rules_router)
 app.include_router(applications_router)
 app.include_router(auth_router)
